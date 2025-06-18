@@ -1,0 +1,34 @@
+@import 'tailwindcss';
+@plugin "@tailwindcss/typography";
+
+@layer utilities {
+  /* Custom styles */
+  .text-shadow {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  }
+
+  body {
+    @apply antialiased;
+  }
+}
+
+@layer base {
+  :root {
+    --color-primary: #1a1b1e;
+    --color-card: rgb(32, 34, 37);
+    --color-text-primary: #e9ecef;
+    --color-text-secondary: #adb5bd;
+    --color-text-tertiary: #222222;
+    --color-accent-blue: #748ffc;
+    --color-accent-orange: #ffa8a8;
+    --color-accent-green: #96f2d7;
+    --color-accent-purple: #e599f7;
+  }
+}
+
+@layer components {
+  .backdrop-blur {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+} 
