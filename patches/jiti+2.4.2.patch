@@ -1,0 +1,3 @@
+const { createRequire } = require("module");
+const _createJiti = require("../dist/jiti.cjs");
+const transform = require("../dist/babel.cjs"); 
