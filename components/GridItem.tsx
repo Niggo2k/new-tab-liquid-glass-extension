@@ -2,10 +2,11 @@ import React, { useState } from "react"
 
 import LiquidGlass from "~node_modules/liquid-glass-react/dist"
 
-import { type Site } from "../../next-app/types"
-import { defaultGridSites } from "../data/defaultGridSites"
-import { useChromeStorage } from "../hooks/useChromeStorage"
+import { type Site } from "../types"
+import { useGridStore } from "../stores/gridStore"
 import { Modal } from "./Modal"
+import { Tooltip, TooltipContent, TooltipTrigger } from "./Tooltip"
+import { cn } from "~lib/utils"
 
 interface GridItemProps {
   site: Site
@@ -15,6 +16,7 @@ interface GridItemProps {
   onDragEnd: (e: React.DragEvent) => void
   onDrop: (e: React.DragEvent, index: number) => void
   isDragging: boolean
+  isDark: boolean
 }
 
 export const GridItem: React.FC<GridItemProps> = ({
@@ -24,112 +26,89 @@ export const GridItem: React.FC<GridItemProps> = ({
   onDragEnter,
   onDragEnd,
   onDrop,
-  isDragging
+  isDragging,
+  isDark
 }) => {
   const faviconUrl =
     site.favicon ||
     (typeof window !== "undefined" && typeof chrome !== "undefined"
-      ? `chrome-extension://${
-          chrome.runtime.id
-        }/_favicon/?pageUrl=${encodeURIComponent(site.url)}&size=128`
+      ? `chrome-extension://${chrome.runtime.id
+      }/_favicon/?pageUrl=${encodeURIComponent(site.url)}&size=128`
       : `https://www.google.com/s2/favicons?domain=${encodeURIComponent(
-          site.url
-        )}&sz=128`)
+        site.url
+      )}&sz=128`)
   const [isEditing, setIsEditing] = useState(false)
-  const {
-    data: gridSites = defaultGridSites.gridSites,
-    setData: setGridSites
-  } = useChromeStorage<Site[]>("gridSites")
+  const { updateSite, removeSite } = useGridStore()
   const [title, setTitle] = useState(site.title)
   const [url, setUrl] = useState(site.url)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const newSite = {
-      id: site.id,
-      favicon: site.favicon,
-      title,
-      url
-    }
-    const newSites = gridSites.map((s) => (s.id === site.id ? newSite : s))
-    setGridSites(newSites)
+    updateSite(site.id, { title, url })
     setIsEditing(false)
   }
 
-  const removeSite = (id: string) => {
-    const newSites = gridSites.filter((s) => s.id !== id)
-    setGridSites(newSites)
+  const handleRemoveSite = (id: string) => {
+    removeSite(id)
   }
 
   return (
-    <>
-      <a
-        draggable
-        onDragStart={(e) => onDragStart(e, index)}
-        onDragEnter={(e) => onDragEnter(e, index)}
-        onDragEnd={(e) => onDragEnd(e)}
-        onDrop={(e) => onDrop(e, index)}
-        href={site.url}
-        className="flex relative w-[72px] group mx-auto xs:mx-0 flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer gap-y-2">
-        <div className="relative [&>*:first-child]:hidden [&>*:nth-child(2)]:hidden [&>*:nth-last-child(1)]:hidden [&>*:nth-last-child(2)]:hidden">
-          <LiquidGlass
-            displacementScale={100}
-            blurAmount={0.1}
-            saturation={130}
-            aberrationIntensity={2}
-            elasticity={0}
-            cornerRadius={16}
-            mode="shader"
-            padding="0px"
-            className="!transform !translate-x-0 !translate-y-0 !scale-100 mx-auto !w-fit [&>*:nth-last-child(1)]:w-full [&>div]:!overflow-visible rounded-2xl [&>*:nth-last-child(1)>div]:w-full [&>svg]:overflow-hidden [&>svg]:rounded-2xl [&>*:nth-last-child(1)>div]:rounded-2xl [&>div>span]:rounded-2xl [&>div>span]:overflow-clip">
-            <div
-              // className={`flex items-center h-14 w-14 justify-center bg-[#ffffff40] hover:bg-[#ffffff59] backdrop-blur-md rounded-2xl focus-within:border-4 focus-within:border-accent-purple/50 ${
-              // 	isDragging ? "border-4 border-accent-purple/50" : ""
-              // }`}
-              className={`flex items-center h-14 w-14 justify-center hover:bg-[#ffffff59] rounded-2xl transition-all duration-300 focus-within:border-4 focus-within:border-accent-purple/50 ${
-                isDragging ? "border-4 border-accent-purple/50" : ""
+    <Tooltip delayDuration={1000}>
+      <TooltipTrigger>
+        <a
+          draggable
+          onDragStart={(e) => onDragStart(e, index)}
+          onDragEnter={(e) => onDragEnter(e, index)}
+          onDragEnd={(e) => onDragEnd(e)}
+          onDrop={(e) => onDrop(e, index)}
+          href={site.url}
+          className="flex relative w-[72px] group mx-auto xs:mx-0 flex-col items-center justify-center text-center  cursor-pointer gap-y-2">
+          <div
+            className={`flex items-center h-14 w-14 justify-center bg-[#ffffff03] shadow-[inset_1px_1px_1px_0px_#ffffff3b] hover:bg-[#ffffff59] backdrop-blur-md rounded-2xl transition-all duration-300 focus-within:border-4 focus-within:border-accent-purple/50 ${isDragging ? "border-4 border-accent-purple/50" : ""
+              }`}
+            style={{ backdropFilter: 'blur(12px)' }}>
+            <img
+              src={faviconUrl}
+              alt={site.title}
+              className="object-contain w-8 h-8 rounded-lg pointer-events-none select-none"
+              onError={(e) => {
+                const img = e.target as HTMLImageElement
+                img.src = "default-favicon.svg"
+              }}
+            />
+          </div>
+          <nav
+            className={`absolute transition-opacity z-50 duration-150 opacity-0 -top-1 right-0.5 w-5 h-5 group-hover:opacity-100 rounded-2xl ${isDragging && "opacity-0!"
               }`}>
-              <img
-                src={faviconUrl}
-                alt={site.title}
-                className="object-contain w-8 h-8 rounded-lg pointer-events-none select-none"
-                onError={(e) => {
-                  const img = e.target as HTMLImageElement
-                  img.src = "default-favicon.svg"
-                }}
-              />
-            </div>
-            <nav
-              className={`absolute transition-opacity z-50 duration-150 opacity-0 -top-1 right-0.5 w-5 h-5 group-hover:opacity-100 rounded-2xl ${
-                isDragging && "opacity-0!"
-              }`}>
-              <button
-                className="p-1 bg-white rounded-full"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setIsEditing(true)
-                }}>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  className="w-3.5 h-3.5">
-                  <path
-                    fill="#62757E"
-                    fillRule="evenodd"
-                    d="M20.651 8.98a2.8 2.8 0 0 0 0-3.96l-1.414-1.414a2.8 2.8 0 0 0-3.96 0L4.182 14.7a2.8 2.8 0 0 0-.81 1.734l-.242 2.74a1.8 1.8 0 0 0 1.952 1.952l2.74-.242a2.8 2.8 0 0 0 1.734-.81L20.65 8.98Zm-1.13-2.829a1.2 1.2 0 0 1 0 1.698l-.915.914-3.112-3.111.915-.915a1.2 1.2 0 0 1 1.697 0l1.414 1.414Zm-5.158.632 3.111 3.111-9.05 9.05a1.2 1.2 0 0 1-.742.347l-2.74.242a.2.2 0 0 1-.218-.217l.242-2.74a1.2 1.2 0 0 1 .347-.743l9.05-9.05Z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-            </nav>
-          </LiquidGlass>
-        </div>
-        <div className="max-w-full text-xs font-semibold text-white truncate">
-          {site.title}
-        </div>
-      </a>
+            <button
+              aria-label="Edit site"
+              className="p-1 bg-white rounded-full select-none text-primary/60"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setIsEditing(true)
+              }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                className="w-3.5 h-3.5" fill="currentColor">
+                <g clipPath="url(#clip0_4482_4868)">
+                  <path d="M20.6899 3.32C19.8399 2.47 18.7199 2 17.5199 2C16.3199 2 15.1899 2.47 14.3499 3.32L3.48989 14.18C2.99989 14.67 2.6699 15.32 2.5699 16.01L2.02989 19.83C1.92989 20.46 2.11989 21.06 2.52989 21.48C2.87989 21.82 3.34989 22 3.86989 22C3.96989 22 4.06989 22 4.17989 21.98L7.9999 21.44C8.6899 21.34 9.33988 21.01 9.82988 20.52L20.6899 9.66C21.5399 8.81 21.9999 7.69 21.9999 6.49C21.9999 5.29 21.5399 4.17 20.6899 3.32ZM17.7799 7.5L16.2099 9.07C16.0399 9.24 15.8099 9.33 15.5699 9.33C15.3399 9.33 15.1099 9.24 14.9399 9.07C14.5899 8.72 14.5899 8.15 14.9399 7.8L16.5099 6.23C16.8599 5.88 17.4299 5.88 17.7799 6.23C18.1299 6.58 18.1299 7.15 17.7799 7.5Z" fill="currentColor" />
+                </g>
+                <defs>
+                  <clipPath id="clip0_4482_4868">
+                    <rect width="24" height="24" fill="currentColor" />
+                  </clipPath>
+                </defs>
+              </svg>
+            </button>
+          </nav>
+          <div className="max-w-full text-xs font-semibold text-white truncate">
+            {site.title}
+          </div>
+        </a>
+      </TooltipTrigger>
+      <TooltipContent isDark={!isDark}>
+        {site.title}
+      </TooltipContent>
       <Modal
         isOpen={isEditing}
         onClose={() => setIsEditing(false)}
@@ -161,7 +140,7 @@ export const GridItem: React.FC<GridItemProps> = ({
           </div>
           <div className="flex pt-6 space-x-3 w-full">
             <button
-              onClick={() => removeSite(site.id)}
+              onClick={() => handleRemoveSite(site.id)}
               className="px-4 py-2 text-sm rounded-lg transition-colors text-text-secondary hover:text-text-primary hover:bg-white/5">
               Remove
             </button>
@@ -179,6 +158,6 @@ export const GridItem: React.FC<GridItemProps> = ({
           </div>
         </div>
       </Modal>
-    </>
+    </Tooltip>
   )
 }

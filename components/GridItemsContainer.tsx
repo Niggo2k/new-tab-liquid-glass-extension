@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import LiquidGlass from "~node_modules/liquid-glass-react/dist"
 
-import { type Site } from "../../next-app/types"
 import { defaultGridSites } from "../data/defaultGridSites"
 import { useChromeStorage } from "../hooks/useChromeStorage"
 import { AddSiteModal } from "./AddSiteModal"
 import { GridItem } from "./GridItem"
+import type { Site } from "~types"
+import { Tooltip, TooltipContent, TooltipTrigger } from "./Tooltip"
 
 // Error boundary for LiquidGlass components
 class LiquidGlassErrorBoundary extends React.Component<
@@ -68,58 +69,10 @@ const AddButton = React.memo(({ onClick }: { onClick: () => void }) => {
   }, [])
 
   return (
-    <div
-      ref={buttonRef}
-      className="relative [&>*:first-child]:hidden [&>*:nth-child(2)]:hidden [&>*:nth-last-child(1)]:hidden [&>*:nth-last-child(2)]:hidden">
-      {isReady ? (
-        <LiquidGlassErrorBoundary
-          fallback={
-            <button
-              onClick={onClick}
-              className="flex justify-center items-center mx-auto w-14 h-14 xs:mx-0 bg-[#ffffff03] shadow-[inset_1px_1px_1px_0px_#ffffff3b] hover:bg-[#ffffff59] backdrop-blur-md rounded-2xl transition-all duration-300 cursor-pointer">
-              <svg
-                className="w-4 h-4 text-white transition-colors group-hover:text-accent-blue"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-            </button>
-          }>
-          <LiquidGlass
-            displacementScale={100}
-            blurAmount={0.1}
-            saturation={130}
-            aberrationIntensity={2}
-            elasticity={0}
-            cornerRadius={16}
-            mode="shader"
-            padding="0px"
-            className="!transform !translate-x-0 !translate-y-0 !scale-100 mx-auto !w-fit">
-            <button
-              onClick={onClick}
-              className="flex justify-center items-center mx-auto w-14 h-14 xs:mx-0 hover:bg-[#ffffff59] transition-all duration-300 cursor-pointer">
-              <svg
-                className="w-4 h-4 text-white transition-colors group-hover:text-accent-blue"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-            </button>
-          </LiquidGlass>
-        </LiquidGlassErrorBoundary>
-      ) : (
+    <>
+      <div
+        ref={buttonRef}
+        className="relative">
         <button
           onClick={onClick}
           className="flex justify-center items-center mx-auto w-14 h-14 xs:mx-0 bg-[#ffffff03] shadow-[inset_1px_1px_1px_0px_#ffffff3b] hover:bg-[#ffffff59] backdrop-blur-md rounded-2xl transition-all duration-300 cursor-pointer">
@@ -136,12 +89,12 @@ const AddButton = React.memo(({ onClick }: { onClick: () => void }) => {
             />
           </svg>
         </button>
-      )}
-    </div>
+      </div>
+    </>
   )
 })
 
-export const GridItemsContainer: React.FC = () => {
+export const GridItemsContainer: React.FC<{ isDark: boolean }> = ({ isDark }) => {
   const { data: gridSites, setData: setGridSites } =
     useChromeStorage<Site[]>("gridSites")
 
@@ -205,6 +158,7 @@ export const GridItemsContainer: React.FC = () => {
           onDragEnd={handleDragEnd}
           onDrop={handleDrop}
           isDragging={draggedIndex === index}
+          isDark={isDark}
         />
       )),
     [
@@ -222,10 +176,17 @@ export const GridItemsContainer: React.FC = () => {
       {gridItems}
 
       {/* Add Button */}
-      <AddButton onClick={handleOpenModal} />
+      <Tooltip delayDuration={1000}>
+        <TooltipTrigger className="flex mx-auto my-0 h-max">
+          <AddButton onClick={handleOpenModal} />
+        </TooltipTrigger>
+        <TooltipContent side="top" isDark={isDark}>
+          Add site
+        </TooltipContent>
+      </Tooltip >
 
       {/* Add Site Modal */}
-      <AddSiteModal isOpen={isAddModalOpen} onClose={handleCloseModal} />
-    </div>
+      < AddSiteModal isOpen={isAddModalOpen} onClose={handleCloseModal} />
+    </div >
   )
 }
