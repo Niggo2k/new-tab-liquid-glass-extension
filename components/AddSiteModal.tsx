@@ -1,8 +1,7 @@
 import React, { useState } from "react"
 
-import { Site } from "../../next-app/types"
-import { defaultGridSites } from "../data/defaultGridSites"
-import { useChromeStorage } from "../hooks/useChromeStorage"
+import { type Site } from "../types"
+import { useGridStore } from "../stores/gridStore"
 import { Modal } from "./Modal"
 
 interface AddSiteModalProps {
@@ -16,10 +15,7 @@ export const AddSiteModal: React.FC<AddSiteModalProps> = ({
 }) => {
   const [title, setTitle] = useState("")
   const [url, setUrl] = useState("")
-  const {
-    data: gridSites = defaultGridSites.gridSites,
-    setData: setGridSites
-  } = useChromeStorage<Site[]>("gridSites")
+  const { addSite } = useGridStore()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,8 +25,7 @@ export const AddSiteModal: React.FC<AddSiteModalProps> = ({
       title,
       url: url.startsWith("http") ? url : `https://${url}`
     } as Site
-    const newSites = [...gridSites, newSite]
-    setGridSites(newSites)
+    addSite(newSite)
     setTitle("")
     setUrl("")
     onClose()

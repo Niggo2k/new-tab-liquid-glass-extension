@@ -2,16 +2,18 @@ import { format } from "date-fns"
 import LiquidGlass from "liquid-glass-react"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
+import { BackgroundModeSwitch } from "./components/BackgroundModeSwitch"
 import { EnhancedNotionWidget } from "./components/EnhancedNotionWidget"
 import { GridItemsContainer } from "./components/GridItemsContainer"
 import { PhotoAttribution } from "./components/PhotoAttribution"
-import { defaultGridSites } from "./data/defaultGridSites"
 import { useBackground } from "./hooks/useBackground"
-import { useChromeStorage } from "./hooks/useChromeStorage"
 import { useImageIsDark } from "./hooks/useImageIsDark"
-import { type Site } from "./types"
+import { useBackgroundStore } from "./stores/backgroundStore"
 
 import "./styles/globals.css"
+import { ShaderAnimation } from "~components/shaders/circular-shader"
+import { LineShaderAnimation } from "~components/shaders/line-shader"
+import { SinusShaderAnimation } from "~components/shaders/sinus-shader"
 
 // Error boundary for LiquidGlass components
 class LiquidGlassErrorBoundary extends React.Component<
@@ -122,9 +124,8 @@ const BackgroundLayer = React.memo(({ background }: { background: string }) => {
         alt="Background"
         loading="eager"
         decoding="async"
-        className={`!fixed inset-0 top-0 object-cover h-full w-full transition-opacity duration-300 ${
-          imageLoaded ? "opacity-100" : "opacity-0"
-        }`}
+        className={`!fixed inset-0 top-0 object-cover h-full w-full transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"
+          }`}
         onLoad={handleImageLoad}
       />
       <div
@@ -149,13 +150,19 @@ const MemoizedGridContainer = React.memo(GridItemsContainer)
 export default function Home() {
   const [time, setTime] = useState(() => new Date())
   const { background, attribution } = useBackground()
-  const {
-    data: gridSites = defaultGridSites.gridSites,
-    setData: setGridSites
-  } = useChromeStorage<Site[]>("gridSites")
+
+  // Use Zustand store
+  const { useShader, currentShader, randomizeShader } = useBackgroundStore()
 
   // Memoize isDark calculation to prevent recalculation on every render
   const isDark = useImageIsDark(background)
+
+  // Randomly select a shader on mount when in shader mode
+  useEffect(() => {
+    if (useShader && !currentShader) {
+      randomizeShader()
+    }
+  }, [useShader, currentShader, randomizeShader])
 
   // Optimize time updates - only update when minute changes for better performance
   useEffect(() => {
@@ -186,7 +193,7 @@ export default function Home() {
         <div className="grid lg:grid-cols-[1fr_320px] gap-8 mb-10">
           {/* Grid */}
           <div className="relative mb-10">
-            <MemoizedGridContainer />
+            <MemoizedGridContainer isDark={isDark} />
           </div>
 
           {/* Side Widgets */}
@@ -201,14 +208,32 @@ export default function Home() {
 
   return (
     <div className="min-h-screen tracking-wide text-text-primary bg-primary">
-      {/* Background */}
-      <BackgroundLayer background={background} />
+      {/* Background - conditional rendering based on mode */}
+      {useShader ? (
+        // Shader mode
+        currentShader === "circular" ? (
+          <ShaderAnimation />
+        ) : currentShader === "line" ? (
+          <LineShaderAnimation />
+        ) : (
+          <SinusShaderAnimation />
+        )
+      ) : (
+        // Wallpaper mode
+        <>
+          <BackgroundLayer background={background} />
+          <div className="absolute inset-0 h-full w-full opacity-10 [mask-image:radial-gradient(#fff,transparent,75%)]" style={{ backgroundImage: "url('assets/noise.webp')", backgroundSize: "30%", zIndex: 1 }}></div>
+        </>
+      )}
 
       {/* Main Container */}
       {mainContent}
 
-      {/* Photo Attribution */}
-      {attribution && (
+      {/* Background Mode Switch */}
+      <BackgroundModeSwitch />
+
+      {/* Photo Attribution - only show in wallpaper mode */}
+      {!useShader && attribution && (
         <MemoizedPhotoAttribution
           name={attribution.author}
           link={attribution.author_link || "#"}
