@@ -69,6 +69,7 @@ export const GridItem: React.FC<GridItemProps> = ({
             style={{ backdropFilter: 'blur(12px)' }}>
             <img
               src={faviconUrl}
+              loading="lazy"
               alt={site.title}
               className="object-contain w-8 h-8 rounded-lg pointer-events-none select-none"
               onError={(e) => {
