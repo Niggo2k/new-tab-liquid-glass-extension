@@ -31,4 +31,31 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
+}
+
+/* Performance optimizations */
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Hardware acceleration for fixed elements */
+[class*="fixed"] {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+/* Optimize image rendering */
+img {
+  image-rendering: optimizeSpeed;
+}
+
+/* Optimize will-change properties */
+[class*="transition"] {
+  will-change: transform, opacity;
+}
+
+[class*="backdrop-blur"] {
+  will-change: filter;
 } 

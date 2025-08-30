@@ -1,70 +1,65 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { wallpaper } from "../data/wallpaper"
 import { useChromeStorage } from "./useChromeStorage"
 
-interface UnsplashResponse {
-  urls: {
-    regular: string
-  }
-  user: {
-    name: string
-    links: {
-      html: string
-    }
-  }
-  links: {
-    download_location: string
-  }
+interface BackgroundAttribution {
+  description: string
+  author: string
+  author_link?: string
 }
 
 export const useBackground = () => {
-  const [background, setBackground] = useState<string>("")
-  const [attribution, setAttribution] = useState<{
-    name: string
-    link: string
-  } | null>(null)
-  const { data: cachedImage, setData: setCachedImage } =
-    useChromeStorage("backgroundImage")
+  const [currentBackground, setCurrentBackground] = useState<string>("")
+  const [currentAttribution, setCurrentAttribution] =
+    useState<BackgroundAttribution | null>(null)
 
-  const fetchRandomPhoto = async () => {
-    const randomWallpaper =
-      wallpaper[Math.floor(Math.random() * wallpaper.length)]
-    return randomWallpaper
-  }
+  const { data: cachedWallpaper, setData: setCachedWallpaper } =
+    useChromeStorage<{
+      url: string
+      attribution: BackgroundAttribution
+      timestamp: number
+    }>("backgroundWallpaper")
 
+  // Initialize background immediately for faster loading
   useEffect(() => {
-    const loadBackground = async () => {
-      // Try to use cached image
-      const image = cachedImage as
-        | { url: string; timestamp: number }
-        | undefined
-      if (image?.url && image?.timestamp) {
+    const loadBackground = () => {
+      // Check if we have a cached wallpaper that's less than 6 hours old
+      if (cachedWallpaper?.url && cachedWallpaper?.timestamp) {
         const hoursSinceLastUpdate =
-          (Date.now() - image.timestamp) / (1000 * 60 * 60)
+          (Date.now() - cachedWallpaper.timestamp) / (1000 * 60 * 60)
         if (hoursSinceLastUpdate < 6) {
-          setBackground(image.url)
+          setCurrentBackground(cachedWallpaper.url)
+          setCurrentAttribution(cachedWallpaper.attribution)
           return
         }
       }
 
-      // Fetch new image
-      const photo = await fetchRandomPhoto()
-      if (photo) {
-        setBackground(photo.url)
-        setAttribution({
-          name: photo.author,
-          link: photo.author_link
-        })
-        setCachedImage({
-          url: photo.url,
-          timestamp: Date.now()
-        })
+      // Get a new random wallpaper
+      const randomWallpaper =
+        wallpaper[Math.floor(Math.random() * wallpaper.length)]
+      const attribution: BackgroundAttribution = {
+        description: randomWallpaper.description,
+        author: randomWallpaper.author,
+        author_link: (randomWallpaper as any).author_link
       }
+
+      setCurrentBackground(randomWallpaper.url)
+      setCurrentAttribution(attribution)
+
+      // Cache the selection
+      setCachedWallpaper({
+        url: randomWallpaper.url,
+        attribution,
+        timestamp: Date.now()
+      })
     }
 
     loadBackground()
-  }, [cachedImage, setCachedImage])
+  }, [cachedWallpaper, setCachedWallpaper])
 
-  return { background, attribution }
+  return {
+    background: currentBackground,
+    attribution: currentAttribution
+  }
 }
