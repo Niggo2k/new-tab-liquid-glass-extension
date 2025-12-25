@@ -1,6 +1,6 @@
 import { format } from "date-fns"
 import LiquidGlass from "liquid-glass-react"
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { BackgroundModeSwitch } from "./components/BackgroundModeSwitch"
 import { EnhancedNotionWidget } from "./components/EnhancedNotionWidget"
@@ -193,12 +193,16 @@ export default function Home() {
         <div className="grid lg:grid-cols-[1fr_320px] gap-8 mb-10">
           {/* Grid */}
           <div className="relative mb-10">
-            <MemoizedGridContainer isDark={isDark} />
+            <Suspense fallback={<div>Loading...</div>}>
+              <MemoizedGridContainer isDark={isDark} />
+            </Suspense>
           </div>
 
           {/* Side Widgets */}
           <div className="space-y-6">
-            <MemoizedNotionWidget isDark={isDark} />
+            <Suspense fallback={<div>Loading...</div>}>
+              <MemoizedNotionWidget isDark={isDark} />
+            </Suspense>
           </div>
         </div>
       </div>

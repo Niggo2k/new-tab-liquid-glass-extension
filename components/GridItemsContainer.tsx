@@ -1,108 +1,38 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useMemo, useRef, useState, useEffect } from "react"
 
-import LiquidGlass from "~node_modules/liquid-glass-react/dist"
-
-import { defaultGridSites } from "../data/defaultGridSites"
-import { useChromeStorage } from "../hooks/useChromeStorage"
+import { useGridStore } from "../stores/gridStore"
 import { AddSiteModal } from "./AddSiteModal"
 import { GridItem } from "./GridItem"
 import type { Site } from "~types"
 import { Tooltip, TooltipContent, TooltipTrigger } from "./Tooltip"
 
-// Error boundary for LiquidGlass components
-class LiquidGlassErrorBoundary extends React.Component<
-  { children: React.ReactNode; fallback: React.ReactNode },
-  { hasError: boolean }
-> {
-  constructor(props: { children: React.ReactNode; fallback: React.ReactNode }) {
-    super(props)
-    this.state = { hasError: false }
-  }
-
-  static getDerivedStateFromError() {
-    return { hasError: true }
-  }
-
-  componentDidCatch(error: Error) {
-    console.warn("LiquidGlass component error:", error.message)
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return this.props.fallback
-    }
-    return this.props.children
-  }
-}
-
-// Memoized add button component with dimension checking
+// Memoized add button component
 const AddButton = React.memo(({ onClick }: { onClick: () => void }) => {
-  const [isReady, setIsReady] = useState(false)
-  const buttonRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    // Wait for component to be properly mounted and sized
-    const checkDimensions = () => {
-      if (buttonRef.current) {
-        const rect = buttonRef.current.getBoundingClientRect()
-        if (rect.width > 0 && rect.height > 0) {
-          setIsReady(true)
-        }
-      }
-    }
-
-    const timer = setTimeout(checkDimensions, 150)
-
-    // Add ResizeObserver for better reliability
-    let resizeObserver: ResizeObserver | undefined
-    if (buttonRef.current && "ResizeObserver" in window) {
-      resizeObserver = new ResizeObserver(checkDimensions)
-      resizeObserver.observe(buttonRef.current)
-    }
-
-    return () => {
-      clearTimeout(timer)
-      if (resizeObserver) {
-        resizeObserver.disconnect()
-      }
-    }
-  }, [])
-
   return (
-    <>
-      <div
-        ref={buttonRef}
-        className="relative">
-        <button
-          onClick={onClick}
-          className="flex justify-center items-center mx-auto w-14 h-14 xs:mx-0 bg-[#ffffff03] shadow-[inset_1px_1px_1px_0px_#ffffff3b] hover:bg-[#ffffff59] backdrop-blur-md rounded-2xl transition-all duration-300 cursor-pointer">
-          <svg
-            className="w-4 h-4 text-white transition-colors group-hover:text-accent-blue"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-        </button>
-      </div>
-    </>
+    <div className="relative">
+      <button
+        onClick={onClick}
+        className="flex justify-center items-center mx-auto w-14 h-14 xs:mx-0 bg-[#ffffff03] shadow-[inset_1px_1px_1px_0px_#ffffff3b] hover:bg-[#ffffff59] backdrop-blur-md rounded-2xl transition-all duration-300 cursor-pointer">
+        <svg
+          className="w-4 h-4 text-white transition-colors group-hover:text-accent-blue"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
+      </button>
+    </div>
   )
 })
 
 export const GridItemsContainer: React.FC<{ isDark: boolean }> = ({ isDark }) => {
-  const { data: gridSites, setData: setGridSites } =
-    useChromeStorage<Site[]>("gridSites")
-
-  // Memoize sites array to prevent unnecessary re-renders
-  const sites: Site[] = useMemo(
-    () => gridSites || (defaultGridSites.gridSites as Site[]),
-    [gridSites]
-  )
+  // Use Zustand store directly - this is the single source of truth
+  const { gridSites: sites, setGridSites, isHydrated } = useGridStore()
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -150,7 +80,7 @@ export const GridItemsContainer: React.FC<{ isDark: boolean }> = ({ isDark }) =>
     () =>
       sites.map((site: Site, index: number) => (
         <GridItem
-          key={site.id || `${site.url}-${index}`} // Use site.id if available for better key stability
+          key={site.id || `${site.url}-${index}`}
           site={site}
           index={index}
           onDragStart={handleDragStart}
@@ -167,9 +97,24 @@ export const GridItemsContainer: React.FC<{ isDark: boolean }> = ({ isDark }) =>
       handleDragStart,
       handleDragEnter,
       handleDragEnd,
-      handleDrop
+      handleDrop,
+      isDark
     ]
   )
+
+  // Show skeleton while hydrating for smoother UX
+  if (!isHydrated) {
+    return (
+      <div className="grid grid-cols-4 gap-5 mx-auto max-w-lg lg:mx-0 sm:grid-cols-5 md:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="w-14 h-14 rounded-2xl animate-pulse bg-white/5"
+          />
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="grid grid-cols-4 gap-5 mx-auto max-w-lg lg:mx-0 sm:grid-cols-5 md:grid-cols-6">
@@ -183,10 +128,10 @@ export const GridItemsContainer: React.FC<{ isDark: boolean }> = ({ isDark }) =>
         <TooltipContent side="top" isDark={isDark}>
           Add site
         </TooltipContent>
-      </Tooltip >
+      </Tooltip>
 
       {/* Add Site Modal */}
-      < AddSiteModal isOpen={isAddModalOpen} onClose={handleCloseModal} />
-    </div >
+      <AddSiteModal isOpen={isAddModalOpen} onClose={handleCloseModal} />
+    </div>
   )
 }
